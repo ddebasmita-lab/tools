@@ -1,0 +1,61 @@
+## Sample tfvars for a Custom Data Commons instance.
+## Copy to <instance>.tfvars and fill in.
+## Apply with: terraform apply -var-file=<instance>.tfvars
+##
+## Deploying into a brand-new GCP project? Start from
+## ../new-instance.tfvars.sample instead — it is the fresh-project template and
+## carries the placeholders the runbook substitutes.
+
+project_id = "REPLACE_PROJECT_ID"
+region     = "us-central1"
+instance   = "REPLACE_INSTANCE"
+
+# Built and pushed by the image build scripts. Use the same short git SHA for
+# both so one deploy is one commit.
+dc_web_service_image = "REPLACE_REGION-docker.pkg.dev/REPLACE_PROJECT_ID/dc-images/services:REPLACE_TAG"
+dc_agent_image       = "REPLACE_REGION-docker.pkg.dev/REPLACE_PROJECT_ID/dc-images/agent:REPLACE_TAG"
+
+# This instance's config bucket — one bucket per instance, holding the
+# contents of narratives/config/.
+config_bucket    = "REPLACE_PROJECT_ID-config"
+brand_config_url = "https://storage.googleapis.com/REPLACE_PROJECT_ID-config"
+
+# Secret Manager IDs. Each must already hold an enabled version before the
+# first apply — Terraform reads them, it does not create them.
+dc_api_key_secret_id      = "REPLACE_INSTANCE-dc-api-key"
+maps_api_key_secret_id    = "REPLACE_INSTANCE-maps-api-key"
+db_pass_secret_id         = "REPLACE_INSTANCE-db-pass"
+gemini_api_keys_secret_id = "REPLACE_INSTANCE-gemini-api-keys"
+
+# dev = editable Agent config panel in the UI; prod = panel hidden, bucket file
+# is the source of truth. Flip to prod before sharing the URL.
+agent_config_mode = "dev"
+
+# Local timezone for {{CURRENT_DATETIME}} rendering in prompts.
+timezone = "UTC"
+
+# Cloud SQL sizing.
+cloudsql_tier              = "db-g1-small"
+cloudsql_availability_type = "REGIONAL"
+
+# Cloud Run autoscale.
+min_instances   = 1
+max_instances   = 10
+services_cpu    = "4"
+services_memory = "16Gi"
+agent_cpu       = "1"
+agent_memory    = "1Gi"
+
+# CORS — tighten to the Cloud Run URL (or custom domain) before going live.
+allowed_origin = "*"
+
+# Notification channel IDs to receive uptime alerts. Leave empty to skip.
+alert_notification_channels = []
+
+# Who may reach the UI. Empty grants nobody; "allUsers" makes it public.
+invoker_members = []
+
+# Leave both false for anything long-lived. See new-instance.tfvars.sample for
+# the teardown-able combination.
+deletion_protection = true
+force_destroy       = false

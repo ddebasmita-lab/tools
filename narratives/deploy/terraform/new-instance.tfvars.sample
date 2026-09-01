@@ -1,0 +1,83 @@
+## new-instance.tfvars.sample
+##
+## Template for deploying a fresh instance into a brand-new GCP project.
+## The runbook copies this file to <instance>.tfvars and substitutes the
+## REPLACE_* placeholders. Every value without a placeholder is a real
+## default — leave it unless you know why you are changing it.
+
+project_id = "REPLACE_PROJECT_ID"
+region     = "REPLACE_REGION"
+instance   = "REPLACE_INSTANCE"
+
+dc_web_service_image = "REPLACE_SERVICES_IMAGE"
+dc_agent_image       = "REPLACE_AGENT_IMAGE"
+
+# Per-instance config bucket. The bucket holds the contents of
+# narratives/config/ uploaded at the bucket root — no <instance>/v1/ subpath.
+config_bucket    = "REPLACE_PROJECT_ID-config"
+brand_config_url = "https://storage.googleapis.com/REPLACE_PROJECT_ID-config"
+
+# Start in dev mode for the first deploy so tuning is possible via the UI.
+# Flip to "prod" before sharing the URL with end users.
+agent_config_mode = "dev"
+
+# Local timezone — used to render {{CURRENT_DATETIME}} in prompts.
+# e.g. "America/Los_Angeles", "Europe/London". Defaults to UTC.
+timezone = "UTC"
+
+# Per-instance Secret Manager IDs. Each must already hold an enabled version
+# before the first apply.
+dc_api_key_secret_id      = "REPLACE_INSTANCE-dc-api-key"
+maps_api_key_secret_id    = "REPLACE_INSTANCE-maps-api-key"
+db_pass_secret_id         = "REPLACE_INSTANCE-db-pass"
+gemini_api_keys_secret_id = "REPLACE_INSTANCE-gemini-api-keys"
+
+# Cloud SQL — REGIONAL HA is the production default. ZONAL is cheaper for a POC
+# (~$50/mo saved) but no automatic failover.
+cloudsql_tier              = "db-g1-small"
+cloudsql_availability_type = "REGIONAL"
+
+# Cloud Run autoscale.
+min_instances = 1
+max_instances = 10
+
+# Resource limits — the upstream image's NL embeddings load needs ~16Gi at
+# startup. Anything lower OOMs about five minutes in. Do not reduce.
+services_cpu    = "4"
+services_memory = "16Gi"
+agent_cpu       = "1"
+agent_memory    = "1Gi"
+
+# CORS — leave permissive for first deploy, tighten to the Cloud Run URL
+# (or custom domain) before going to production.
+allowed_origin = "*"
+
+# Cloud Monitoring notification channels — leave empty for first deploy.
+# Populate with channel IDs from `gcloud alpha monitoring channels list` later.
+alert_notification_channels = []
+
+# Overrides for an instance that reuses infrastructure this module did not
+# create. For a fresh-project deploy leave all five as they are: the
+# module-created Cloud SQL and data bucket are the source of truth.
+#
+# Leave output_dir and input_dir EMPTY. The module then derives
+# gs://<data bucket>/output and /input, which is what both the ingest job and
+# the services container read. Setting them to a bare bucket path splits the
+# two apart, and custom variables go missing from search with no error.
+cloudsql_instance_override = ""
+db_user_override           = ""
+output_dir                 = ""
+input_dir                  = ""
+extra_data_buckets         = []
+
+# Who may reach the UI. "allUsers" makes the instance public; otherwise list
+# the people or groups, e.g. ["group:team@example.com"].
+invoker_members = []
+
+# Only used when the service is placed behind IAP.
+iap_authorized_members = []
+
+# Teardown-able by design: a fresh instance is usually a trial. Both must be
+# flipped before the instance carries anything you cannot lose.
+deletion_protection = false
+force_destroy       = true

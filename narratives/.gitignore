@@ -54,3 +54,15 @@ sample.js
 # Redundant snapshot of the original AI Studio scaffold
 Archive.zip
 deploy.env
+
+# Terraform working files. The provider cache is ~230 MB, and the lock file
+# records hashes only for the platform it was generated on — regenerate both
+# locally with `terraform init`.
+deploy/terraform/**/.terraform
+deploy/terraform/**/.terraform.lock.hcl
+# Real tfvars carry project IDs and image tags; only the .sample files ship.
+deploy/terraform/**/*.tfvars
+!deploy/terraform/**/*.tfvars.sample
+deploy/terraform/**/*.tfstate
+deploy/terraform/**/*.tfstate.*
+deploy/terraform/**/*.tfplan
