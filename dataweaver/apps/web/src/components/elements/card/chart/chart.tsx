@@ -18,13 +18,16 @@ import { useQueryActions } from '~/components/scopes/atlas/query_provider';
 import type { ChartStyle, FacetInfo } from '~/server/types';
 import { useAtlasStore } from '~/store';
 import s from './chart.module.scss';
+import { extractValidEntityKeys, resolveChartStyle } from './chart_style';
 import { ConditionalTabs } from './conditional_tabs';
 import { DataChartBarHorizontal } from './data_chart_bar_horizontal';
 import { DataChartBarVertical } from './data_chart_bar_vertical';
+import { DataChartChoropleth } from './data_chart_choropleth';
 import { DataChartLine } from './data_chart_line';
 import { DataTable } from './data_table';
 import { FacetSelector } from './facet_selector';
 import { MenuChartOptions } from './menu_chart_options';
+import { useGeoAvailability } from './use_geo_availability';
 
 export interface ChartDatum {
   date: string;
@@ -51,6 +54,7 @@ export interface CardChartProps extends CardState {
   facets?: FacetInfo[];
   /** Per-series facets, keyed by series `key` (e.g. placeDcid). */
   seriesFacets?: Record<string, FacetInfo[]>;
+  parentPlaceDcid?: string;
   relatedQueries?: string[];
   /** Persisted chart style from the store (survives export/import). */
   chartStyle?: ChartStyle;
@@ -66,6 +70,7 @@ export const CardChart = ({
   series: seriesProp,
   facets,
   seriesFacets,
+  parentPlaceDcid,
   relatedQueries,
   chartStyle,
 }: CardChartProps) => {
@@ -155,12 +160,31 @@ export const CardChart = ({
 
   const chartSeries = baseSeries;
 
-  // Default to line chart when data has many points; allow manual override.
-  const totalPoints = chartSeries
-    ? chartSeries.reduce((sum, entry) => sum + entry.data.length, 0)
-    : 0;
-  const defaultStyle: ChartStyle = totalPoints > 15 ? 'line' : 'bar-vertical';
-  const selectedStyle = chartStyle ?? selectedStyleOverride ?? defaultStyle;
+  const validEntityKeys = useMemo(
+    () => extractValidEntityKeys(chartSeries),
+    [chartSeries],
+  );
+
+  const [isGeoAvailable, setIsGeoAvailable] = useGeoAvailability(
+    parentPlaceDcid,
+    validEntityKeys,
+  );
+
+  const totalPoints = useMemo(
+    () =>
+      chartSeries
+        ? chartSeries.reduce((sum, entry) => sum + entry.data.length, 0)
+        : 0,
+    [chartSeries],
+  );
+
+  const selectedStyle = resolveChartStyle({
+    chartStyle,
+    selectedStyleOverride,
+    validEntityCount: validEntityKeys.length,
+    isGeoAvailable,
+    totalPoints,
+  });
   return (
     <CardBase
       id={id}
@@ -256,6 +280,12 @@ export const CardChart = ({
                         <DataChartBarVertical series={chartSeries} />
                       ) : selectedStyle === 'bar-horizontal' ? (
                         <DataChartBarHorizontal series={chartSeries} />
+                      ) : selectedStyle === 'choropleth' ? (
+                        <DataChartChoropleth
+                          series={chartSeries}
+                          parentPlaceDcid={parentPlaceDcid}
+                          onUnavailable={() => setIsGeoAvailable(false)}
+                        />
                       ) : (
                         <DataChartLine series={chartSeries} />
                       ),
